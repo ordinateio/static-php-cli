@@ -1,73 +1,82 @@
-name: "CI on x86_64 Windows"
+name: "Build on Windows x86_64"
 
 on:
   workflow_dispatch:
     inputs:
-      php-version:
+      version:
+        description: "PHP version to build"
         required: true
-        description: PHP version to compile
-        default: '8.4'
         type: choice
+        default: "8.4"
         options:
-          - '8.4'
-          - '8.3'
-          - '8.2'
-          - '8.1'
+          - "8.4"
+          - "8.3"
+          - "8.2"
+          - "8.1"
       extensions:
-        description: Extensions to build (comma separated)
+        description: "Extensions to build (comma separated)"
         required: true
         type: string
-      extra-libs:
-        description: Extra libraries to build (optional, comma separated)
+        default: "bcmath,bz2,calendar,ctype,curl,dom,ev,exif,ffi,fileinfo,filter,iconv,libxml,mbregex,mbstring,opcache,openssl,pdo,pdo_sqlite,phar,session,shmop,simplexml,soap,sockets,sodium,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,gd"
+      libs:
+        description: "Libraries to build (comma separated)"
         type: string
+        default: "freetype,libjpeg,libavif,libwebp"
       build-cli:
-        description: Build cli binary
-        default: true
+        description: "Build CLI binary"
         type: boolean
+        default: true
       build-micro:
-        description: Build phpmicro binary
-        type: boolean
-      prefer-pre-built:
-        description: Prefer pre-built binaries (reduce build time)
-        type: boolean
-        default: true
-      debug:
-        description: Show full build logs
-        type: boolean
-      no-strip:
-        description: Keep debug symbols for debugging
+        description: "Build PHPMicro binary"
         type: boolean
         default: false
-  workflow_call:
-    inputs:
-      php-version:
-        required: true
-        description: PHP version to compile
-        default: '8.4'
-        type: string
-      extensions:
-        description: Extensions to build (comma separated)
-        required: true
-        type: string
-      extra-libs:
-        description: Extra libraries to build (optional, comma separated)
-        type: string
-      build-cli:
-        description: Build cli binary
-        default: true
-        type: boolean
-      build-micro:
-        description: Build phpmicro binary
-        type: boolean
       prefer-pre-built:
-        description: Prefer pre-built binaries (reduce build time)
+        description: "Prefer pre-built binaries"
         type: boolean
         default: true
       debug:
-        description: Show full build logs
+        description: "Show full build logs"
         type: boolean
+        default: false
       no-strip:
-        description: Keep debug symbols for debugging
+        description: "Keep debug symbols for debugging"
+        type: boolean
+        default: false
+
+  workflow_call:
+    inputs:
+      version:
+        description: "PHP version to build"
+        required: true
+        type: string
+        default: "8.4"
+      extensions:
+        description: "Extensions to build (comma separated)"
+        required: true
+        type: string
+        default: "bcmath,bz2,calendar,ctype,curl,dom,ev,exif,ffi,fileinfo,filter,iconv,libxml,mbregex,mbstring,opcache,openssl,pdo,pdo_sqlite,phar,session,shmop,simplexml,soap,sockets,sodium,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,gd"
+      libs:
+        description: "Libraries to build (comma separated)"
+        type: string
+        default: "freetype,libjpeg,libavif,libwebp"
+      build-cli:
+        description: "Build CLI binary"
+        type: boolean
+        default: true
+      build-micro:
+        description: "Build PHPMicro binary"
+        type: boolean
+        default: false
+      prefer-pre-built:
+        description: "Prefer pre-built binaries"
+        type: boolean
+        default: true
+      debug:
+        description: "Show full build logs"
+        type: boolean
+        default: false
+      no-strip:
+        description: "Keep debug symbols for debugging"
         type: boolean
         default: false
 
@@ -76,77 +85,89 @@ env:
 
 jobs:
   build:
-    name: "Build ${{ inputs.php-version }} on Windows x86_64"
+    name: "Build ${{ inputs.version }} on Windows x86_64"
     runs-on: windows-latest
-    steps:
-      # Checkout
-      - uses: actions/checkout@v4
 
-      # Cache composer dependencies
-      - id: cache-composer-deps
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Cache composer dependencies"
+        id: cache-composer-deps
         uses: actions/cache@v4
         with:
           path: vendor
           key: composer-dependencies
 
-      # If there's no Composer cache, install dependencies
       - if: steps.cache-composer-deps.outputs.cache-hit != 'true'
+        name: "Install composer dependencies"
         run: composer update --no-dev --classmap-authoritative
 
-      - name: Generate hashed key for download cache
+      - name: "Generate hashed key for download cache"
         shell: bash
         run: |
-          INPUT_HASH=$(echo "${{ runner.os }}-${{ inputs.php-version }}-${{ inputs.extensions }}" | sha256sum | awk '{print $1}')
+          INPUT_HASH=$(echo "${{ runner.os }}-${{ inputs.version }}-${{ inputs.extensions }}" | sha256sum | awk '{print $1}')
           echo "INPUT_HASH=${INPUT_HASH}" >> "$GITHUB_ENV"
 
-      # Cache downloaded source
-      - id: cache-download
+      - name: "Cache downloaded source"
+        id: cache-download
         uses: actions/cache@v4
         with:
           path: downloads
           key: php-${{ env.INPUT_HASH }}
 
-      # With or without debug
+      # With Debug Option
       - if: inputs.debug == true
         run: echo "SPC_BUILD_DEBUG=--debug" >> $env:GITHUB_ENV
+
+      # With Pre-built Option
       - if: inputs.prefer-pre-built == true
         run: echo "SPC_PRE_BUILT=--prefer-pre-built" >> $env:GITHUB_ENV
 
-      # With target select: cli, micro or both
+      # With CLI Option
       - if: ${{ inputs.build-cli == true }}
         run: echo "SPC_BUILD_CLI=--build-cli" >> $env:GITHUB_ENV
+
+      # With Micro Option
       - if: ${{ inputs.build-micro == true }}
         run: echo "SPC_BUILD_MICRO=--build-micro" >> $env:GITHUB_ENV
 
+      # Doctor
       - run: ./bin/spc doctor
 
       # If there's no dependencies cache, fetch sources, with or without debug
       - if: steps.cache-download.outputs.cache-hit != 'true'
-        run: ./bin/spc download --with-php="${{ inputs.php-version }}" --for-extensions="${{ inputs.extensions }}" --for-libs="${{ inputs.extra-libs }}" ${{ env.SPC_BUILD_DEBUG }} ${{ env.SPC_PRE_BUILT }}
+        run: ./bin/spc download --with-php="${{ inputs.version }}" --for-extensions="${{ inputs.extensions }}" --for-libs="${{ inputs.libs }}" ${{ env.SPC_BUILD_DEBUG }} ${{ env.SPC_PRE_BUILT }}
 
-      # Run build command
-      - run: ./bin/spc build "${{ inputs.extensions }}" --with-libs="${{ inputs.extra-libs }}" ${{ env.SPC_BUILD_DEBUG }} ${{ env.SPC_BUILD_CLI }} ${{ env.SPC_BUILD_MICRO }} ${{ env.SPC_BUILD_FPM }}
+      # Run Build Command
+      - run: ./bin/spc build "${{ inputs.extensions }}" --with-libs="${{ inputs.libs }}" ${{ env.SPC_BUILD_DEBUG }} ${{ env.SPC_BUILD_CLI }} ${{ env.SPC_BUILD_MICRO }} ${{ env.SPC_BUILD_FPM }}
 
-      # Upload cli executable
+      # "Upload PHP CLI"
       - if: ${{ inputs.build-cli == true }}
+        name: "Upload PHP CLI"
         uses: actions/upload-artifact@v4
         with:
-          name: php-${{ inputs.php-version }}
+          name: php-${{ inputs.version }}
           path: buildroot/bin/php.exe
 
-      # Upload micro self-extracted executable
+      # Upload PHP Micro
       - if: ${{ inputs.build-micro == true }}
+        name: "Upload PHP Micro"
         uses: actions/upload-artifact@v4
         with:
-          name: micro-${{ inputs.php-version }}
+          name: micro-${{ inputs.version }}
           path: buildroot/bin/micro.sfx
 
-      # Upload extensions metadata
+      # Upload License Files
       - uses: actions/upload-artifact@v4
+        name: "Upload License Files"
         with:
           name: license-files
           path: buildroot/license/
+
+      # Upload Build Metadata
       - uses: actions/upload-artifact@v4
+        name: "Upload Build Metadata"
         with:
           name: build-meta
           path: |
