@@ -95,7 +95,7 @@ on:
         default: false
 
 env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   define-build:
@@ -198,9 +198,6 @@ jobs:
         run: ${{ needs.define-build.outputs.download }}
       - name: "Build PHP"
         run: ${{ needs.define-build.outputs.build }}
-#      - name: Setup tmate session
-#        if: ${{ failure() }}
-#        uses: mxschmitt/action-tmate@v3
 
       # Upload cli executable
       - if: ${{ inputs.build-cli == true }}
