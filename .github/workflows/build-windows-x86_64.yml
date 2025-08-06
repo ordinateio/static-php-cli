@@ -99,8 +99,8 @@ jobs:
           path: vendor
           key: composer-dependencies
 
-      - if: steps.cache-composer-deps.outputs.cache-hit != 'true'
-        name: "Install composer dependencies"
+      - name: "Install composer dependencies"
+        if: steps.cache-composer-deps.outputs.cache-hit != 'true'
         run: composer update --no-dev --classmap-authoritative
 
       - name: "Generate hashed key for download cache"
@@ -116,58 +116,54 @@ jobs:
           path: downloads
           key: php-${{ env.INPUT_HASH }}
 
-      # With Debug Option
-      - if: inputs.debug == true
+      - name: "Enable debug option"
+        if: inputs.debug == true
         run: echo "SPC_BUILD_DEBUG=--debug" >> $env:GITHUB_ENV
 
-      # With Pre-built Option
-      - if: inputs.prefer-pre-built == true
+      - name: "Enable pre-built option"
+        if: inputs.prefer-pre-built == true
         run: echo "SPC_PRE_BUILT=--prefer-pre-built" >> $env:GITHUB_ENV
 
-      # With CLI Option
-      - if: ${{ inputs.build-cli == true }}
+      - name: "Enable CLI SAPI option"
+        if: ${{ inputs.build-cli == true }}
         run: echo "SPC_BUILD_CLI=--build-cli" >> $env:GITHUB_ENV
 
-      # With Micro Option
-      - if: ${{ inputs.build-micro == true }}
+      - name: "Enable Micro SAPI option"
+        if: ${{ inputs.build-micro == true }}
         run: echo "SPC_BUILD_MICRO=--build-micro" >> $env:GITHUB_ENV
 
-      # Doctor
-      - run: ./bin/spc doctor
+      - name: "Run doctor command"
+        run: ./bin/spc doctor
 
-      # If there's no dependencies cache, fetch sources, with or without debug
-      - if: steps.cache-download.outputs.cache-hit != 'true'
+      - name: "Run download command"
+        if: steps.cache-download.outputs.cache-hit != 'true'
         run: ./bin/spc download --with-php="${{ inputs.version }}" --for-extensions="${{ inputs.extensions }}" --for-libs="${{ inputs.libs }}" ${{ env.SPC_BUILD_DEBUG }} ${{ env.SPC_PRE_BUILT }}
 
-      # Run Build Command
-      - run: ./bin/spc build "${{ inputs.extensions }}" --with-libs="${{ inputs.libs }}" ${{ env.SPC_BUILD_DEBUG }} ${{ env.SPC_BUILD_CLI }} ${{ env.SPC_BUILD_MICRO }} ${{ env.SPC_BUILD_FPM }}
+      - name: "Run build command"
+        run: ./bin/spc build "${{ inputs.extensions }}" --with-libs="${{ inputs.libs }}" ${{ env.SPC_BUILD_DEBUG }} ${{ env.SPC_BUILD_CLI }} ${{ env.SPC_BUILD_MICRO }} ${{ env.SPC_BUILD_FPM }}
 
-      # "Upload PHP CLI"
-      - if: ${{ inputs.build-cli == true }}
-        name: "Upload PHP CLI"
+      - name: "Upload PHP CLI SAPI"
+        if: ${{ inputs.build-cli == true }}
         uses: actions/upload-artifact@v4
         with:
           name: php-${{ inputs.version }}
           path: buildroot/bin/php.exe
 
-      # Upload PHP Micro
-      - if: ${{ inputs.build-micro == true }}
-        name: "Upload PHP Micro"
+      - name: "Upload PHP Micro SAPI"
+        if: ${{ inputs.build-micro == true }}
         uses: actions/upload-artifact@v4
         with:
           name: micro-${{ inputs.version }}
           path: buildroot/bin/micro.sfx
 
-      # Upload License Files
-      - uses: actions/upload-artifact@v4
-        name: "Upload License Files"
+      - name: "Upload license files"
+        uses: actions/upload-artifact@v4
         with:
           name: license-files
           path: buildroot/license/
 
-      # Upload Build Metadata
-      - uses: actions/upload-artifact@v4
-        name: "Upload Build Metadata"
+      - name: "Upload build metadata"
+        uses: actions/upload-artifact@v4
         with:
           name: build-meta
           path: |
