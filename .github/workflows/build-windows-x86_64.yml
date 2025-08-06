@@ -1,4 +1,4 @@
-name: "CI on x86_64 Windows"
+name: CI on x86_64 Windows
 
 on:
   workflow_dispatch:
