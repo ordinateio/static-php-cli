@@ -43,43 +43,6 @@ on:
         type: boolean
         default: false
 
-  workflow_call:
-    inputs:
-      version:
-        description: "PHP version to build"
-        required: true
-        type: string
-        default: "8.4"
-      extensions:
-        description: "Extensions to build (comma separated)"
-        required: true
-        type: string
-        default: "bcmath,bz2,calendar,ctype,curl,dom,ev,exif,ffi,fileinfo,filter,iconv,libxml,mbregex,mbstring,opcache,openssl,pdo,pdo_sqlite,phar,session,shmop,simplexml,soap,sockets,sodium,sqlite3,tokenizer,xml,xmlreader,xmlwriter,zip,zlib,gd"
-      libs:
-        description: "Libraries to build (comma separated)"
-        type: string
-        default: "freetype,libjpeg,libavif,libwebp"
-      build-cli:
-        description: "Build CLI binary"
-        type: boolean
-        default: true
-      build-micro:
-        description: "Build PHPMicro binary"
-        type: boolean
-        default: false
-      prefer-pre-built:
-        description: "Prefer pre-built binaries"
-        type: boolean
-        default: true
-      debug:
-        description: "Show full build logs"
-        type: boolean
-        default: false
-      no-strip:
-        description: "Keep debug symbols for debugging"
-        type: boolean
-        default: false
-
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
